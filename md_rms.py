@@ -33,14 +33,14 @@ plt.rc('axes', prop_cycle=cycler('color', colors))
 # =============================================
 align_traj = True
 coordfiles = ["../trajcat_Set_0_0_0/step7_cat_568ns_notwater.xtc",
-              #"../trajcat_Set_0_0_1/step7_cat_1200ns_notwater.xtc",
+              "../trajcat_Set_0_0_1/step7_cat_450ns_notwater.xtc",
               ]
 # 1 ns = 10 frames
 dt = 0.1 # time step in ns, used to convert time to frames
 topfile = "../trajcat_Set_0_0_0/step7_cat_notwater.pdb"
 #topfile = "../trajcat_Set_0_0_0/step7_cat.pdb"
 warmup = 0 # number of frames to discard before stride
-stride = 1
+stride = 5
 
 # receptor
 rec_chainid = 0
@@ -187,7 +187,7 @@ for i,coordfile in enumerate(coordfiles):
 # =============================================================
 #               Plot RMSD series and histogram
 # =============================================================
-def plot_rmsd(rmsd_list, time_list, title='rmsd'):
+def plot_rmsd(rmsd_list, time_list, title='rmsd',hist_range=[0,10]):
 
     # Time series
     plt.figure(figsize=((6,4)))
@@ -216,19 +216,29 @@ def plot_rmsd(rmsd_list, time_list, title='rmsd'):
         plt.savefig(f"{title}_mean.png",dpi=500, bbox_inches='tight')
     
     # Histogram
-    rmsd_all = np.concatenate(rmsd_list)  # concatenate all RMSD values
+    bin_size = 0.1  # bin size in Angstroms
+    n_bins = int((hist_range[1] - hist_range[0])/ bin_size)  # number of bins based on range
     plt.figure(figsize=((6,4)))
-    bin_size = 0.25  # bin size in Angstroms
-    n_bins = int(10. / bin_size)  # number of bins based on range
-    plt.hist(rmsd_all, bins=n_bins, alpha=0.7, density=True, range=(0,10), rwidth=0.9)
+    for i, rmsd in enumerate(rmsd_list):    
+        plt.hist(rmsd, bins=n_bins, alpha=0.4, density=True, range=hist_range, rwidth=0.9,  label=f'Traj {i}')
     plt.xlabel('RMSD ($\AA$)')
     plt.ylabel('Probability Density')
-    plt.xlim(0, 10)
+    plt.xlim(hist_range[0], hist_range[1])
+    plt.legend(loc='best',prop={'size':6})
     plt.savefig(f"{title}_hist.png",dpi=500, bbox_inches='tight')
+    
+    if len(rmsd_list) > 1:
+        rmsd_all = np.concatenate(rmsd_list)  # concatenate all RMSD values
+        plt.figure(figsize=((6,4)))
+        plt.hist(rmsd_all, bins=n_bins, alpha=0.7, density=True, range=hist_range, rwidth=0.9)
+        plt.xlabel('RMSD ($\AA$)')
+        plt.ylabel('Probability Density')
+        plt.xlim(hist_range[0], hist_range[1])
+        plt.savefig(f"{title}_hist_all.png",dpi=500, bbox_inches='tight')
 
 plot_rmsd(rmsd_rec_list, time_list, title='rmsd_rec')
 plot_rmsd(rmsd_comp_list, time_list, title='rmsd_complex')
-plot_rmsd(rmsd_lig_list, time_list, title='rmsd_lig')
+plot_rmsd(rmsd_lig_list, time_list, title='rmsd_lig', hist_range=[0,5])
 
 # =============================================
 #               Plot RMSF
@@ -286,4 +296,4 @@ if len(rmsf_list) > 1:
     plt.xlabel('Residue Index')
     plt.ylabel('RMSF ($\AA$)')
     plt.savefig("rmsf_mean.png",dpi=500, bbox_inches='tight')
-print("... Done ...", flush=True)
+print("\n... Done ...", flush=True)
