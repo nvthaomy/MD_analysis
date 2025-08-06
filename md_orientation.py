@@ -312,6 +312,6 @@ plot_hist(deviation_angles_all, f"angle_deviation_all", xlabels=['Angle PC1 (deg
 
 ylabels = ['Roll-PC1 (deg)', 'Pitch-PC2 (deg)', 'Yaw-PC3 (deg)']
 for i in range(3):
-    plot_scatter(rmsd_arr_all, euler_angles_all[:,i], f'rmsd_euler{i}', xlabel="RMSD ($\AA$)", ylabel=ylabels[i])
+    plot_scatter(rmsd_arr_all, euler_angles_all[:,i], f'rmsd_euler_pc{i+1}', xlabel="RMSD ($\AA$)", ylabel=ylabels[i])
 
 print("... Done ...", flush=True)   
