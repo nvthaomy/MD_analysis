@@ -32,24 +32,28 @@ plt.rc('axes', prop_cycle=cycler('color', colors))
 #                    Input
 # =============================================
 align_traj = True
-coordfiles = ["../trajcat_Set_0_0_0/step7_cat_568ns_notwater.xtc",
-              "../trajcat_Set_0_0_1/step7_cat_450ns_notwater.xtc",
+coordfiles = ["../trajcat_Set_0_0_0/step7_cat_1200ns_notwater.xtc",
+              "../trajcat_Set_0_0_1/step7_cat_1200ns_notwater.xtc",
+              "../trajcat_Set_0_0_2/step7_cat_1200ns_notwater.xtc",
+              "../trajcat_Set_0_0_3/step7_cat_1017ns_notwater.xtc",
+              "../trajcat_Set_0_0_4/step7_cat_1134ns_notwater.xtc",
+              "../trajcat_Set_0_0_5/step7_cat_749ns_notwater.xtc",
               ]
 # 1 ns = 10 frames
 dt = 0.1 # time step in ns, used to convert time to frames
 topfile = "../trajcat_Set_0_0_0/step7_cat_notwater.pdb"
 #topfile = "../trajcat_Set_0_0_0/step7_cat.pdb"
 warmup = 0 # number of frames to discard before stride
-stride = 5
+stride = 2
 
 # receptor
 rec_chainid = 0
 rec_resid0 = 47 # index of the first residue of the receptor based on UnitProt sequence
 # ligand
-lig_chainid = 4
+lig_chainid = 2
 # other proteins (G protein/ Arrestin)
-prot_chainid = [1,2,3] # other protein chains if any, optional
-prot_resid0 = [11,14,1] # index of the first residue of proteins based on UnitProt sequence
+prot_chainid = [1] # other protein chains if any, optional
+prot_resid0 = [1] # index of the first residue of proteins based on UnitProt sequence
 
 # Select the C-alpha atoms of the receptor for alignment,
 # TM region: resid 55-335
@@ -220,7 +224,8 @@ def plot_rmsd(rmsd_list, time_list, title='rmsd',hist_range=[0,10]):
     n_bins = int((hist_range[1] - hist_range[0])/ bin_size)  # number of bins based on range
     plt.figure(figsize=((6,4)))
     for i, rmsd in enumerate(rmsd_list):    
-        plt.hist(rmsd, bins=n_bins, alpha=0.4, density=True, range=hist_range, rwidth=0.9,  label=f'Traj {i}')
+        sns.histplot(rmsd, bins=n_bins, kde=True, stat='density', binrange=hist_range, 
+                      alpha=0.4, label=f'Traj {i}', linewidth=0.05)
     plt.xlabel('RMSD ($\AA$)')
     plt.ylabel('Probability Density')
     plt.xlim(hist_range[0], hist_range[1])
