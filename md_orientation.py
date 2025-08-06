@@ -42,6 +42,7 @@ coordfiles = ["../trajcat_Set_0_0_0/step7_cat_1200ns.xtc",
               "../trajcat_Set_0_0_2/step7_cat_1200ns.xtc",
               "../trajcat_Set_0_0_3/step7_cat_1200ns.xtc",
               "../trajcat_Set_0_0_4/step7_cat_1200ns.xtc",
+              "../trajcat_Set_0_0_5/step7_cat_1200ns.xtc"
               ]
 # 1 ns = 10 frames
 dt = 0.2 # time step in ns, 0.1 if aligning trajectories from ../trajcat_Set_0_0_0/step7_cat_1200ns.xtc, adjust accordingly if using aligned trajectories
@@ -162,12 +163,12 @@ def plot_scatter(x,y, plotname, xlabel="RMSD ($\AA$)", ylabel='y'):
     g.plot_marginals(sns.kdeplot, fill=True, color='blue')
     g.savefig(f"{plotname}.png", dpi=500) 
 
-    
-for i,coordfile in enumerate(coordfiles):
+ if align_traj:
+    for i,coordfile in enumerate(coordfiles):
     # =============================================
     #               Load trajectory
     # =============================================
-    if align_traj:
+   
         print(f"\n... Loading Trajectory {i+1}/{len(coordfiles)} ...", flush=True)
         traj = md.load(coordfile,top=topfile,stride=stride)
         top = traj.topology
@@ -205,9 +206,10 @@ for i,coordfile in enumerate(coordfiles):
             name = coordfile.split("/")[-1]
             name = ''.join(name.split(".")[:-1])
             traj.save(f"{name}_aligned_stride{stride}_{i}.xtc")
-    else:
-        print(f"\n... Loading Aligned Trajectory {i+1}/{len(coordfiles)} ...", flush=True)
-        traj = md.load(aligned_trajs[i],top=topfile,stride=stride)
+else:
+    for i,coordfile in enumerate(aligned_trajs):
+        print(f"\n... Loading Aligned Trajectory {i+1}/{len(aligned_trajs)} ...", flush=True)
+        traj = md.load(coordfile,top=topfile,stride=stride)
         top = traj.topology
         time = np.arange(traj.n_frames) * dt * stride
         print("... Done Loading ...", flush=True)
