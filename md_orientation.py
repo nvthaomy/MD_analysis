@@ -17,6 +17,7 @@ Usage:
 
 License: MIT License
 """
+import os
 import mdtraj as md
 
 import time as time_py
@@ -36,6 +37,7 @@ from sklearn.decomposition import PCA
 # =============================================
 #                    Input
 # =============================================
+OUTDIR = 'arr_orientation'
 skip_save_align = True # skip saving if already generated aligned structure
 coordfiles = ["../trajcat_Set_0_0_0/step7_cat_1200ns.xtc",
               "../trajcat_Set_0_0_1/step7_cat_1200ns.xtc",
@@ -46,8 +48,8 @@ coordfiles = ["../trajcat_Set_0_0_0/step7_cat_1200ns.xtc",
               ]
 # 1 ns = 10 frames
 dt = 0.2 # time step in ns, 0.1 if aligning trajectories from ../trajcat_Set_0_0_0/step7_cat_1200ns.xtc, adjust accordingly if using aligned trajectories
-topfile = "../trajcat_Set_0_0_0/step7_cat_notwater.pdb"
-ref_file = "../trajcat_Set_0_0_0/step7_cat_notwater.pdb" # use for aligning and PC analysis of arrestin rotation
+topfile = "../trajcat_Set_0_0_0/step7_cat.pdb"
+ref_file = "../trajcat_Set_0_0_0/step7_cat.pdb" # use for aligning and PC analysis of arrestin rotation
 stride = 1
 
 # receptor
@@ -68,15 +70,16 @@ align_traj = False
 rotation_analysis = True
 
 # if align_traj is False, aligned trajectories are used
-aligned_trajs = ['./step7_cat_1200ns_notwater_aligned_stride2_0.xtc',
-                 './step7_cat_1200ns_notwater_aligned_stride2_1.xtc',
-                 './step7_cat_1200ns_notwater_aligned_stride2_2.xtc',
-                 './step7_cat_1017ns_notwater_aligned_stride2_3.xtc',
-                 './step7_cat_1134ns_notwater_aligned_stride2_4.xtc',
-                 './step7_cat_749ns_notwater_aligned_stride2_5.xtc']
+aligned_trajs = ['./step7_cat_1200ns_aligned_stride2_0.xtc',
+                 './step7_cat_1200ns_aligned_stride2_1.xtc',
+                 './step7_cat_1200ns_aligned_stride2_2.xtc',
+                 './step7_cat_1200ns_aligned_stride2_3.xtc',
+                 './step7_cat_1200ns_aligned_stride2_4.xtc',
+                 './step7_cat_1200ns_aligned_stride2_5.xtc']
 
 # =============================================
-ref = md.load(ref_file)
+if not os.path.exists(OUTDIR):
+    os.makedirs(OUTDIR)
 
 def write_traj_with_pc_axes(traj, principal_axes_list, atom_indices_for_pca, filename, scale=3.0):
     """Write a trajectory file containing principal component axes as pseudo-atoms, ignore all water
@@ -101,8 +104,8 @@ def write_traj_with_pc_axes(traj, principal_axes_list, atom_indices_for_pca, fil
     # concatenate the original traj with principal axes origin (com) and endpoints, along the atom axis
     xyz_new = np.concatenate((xyz, com, principal_axes), axis=1)
     traj_new = md.Trajectory(xyz=xyz_new, topology=top, unitcell_lengths=ul, unitcell_angles=ua)
-    traj_new.save(filename+'.xtc')
-    traj_new[0].save(filename+'.pdb')
+    traj_new.save(os.path.join(OUTDIR, filename+'.xtc'))
+    traj_new[0].save(os.path.join(OUTDIR, filename+'.pdb'))
 
 def compute_principal_axes(frame,atom_indices,nose_atom_indices=None,bottom_atom_indices=None):
     """Compute the principal axes (eigenvectors) position array for a given structure.
@@ -141,7 +144,7 @@ def plot_hist(angles, plotname, xlabels='x', ylabels='Frequency'):
     plt.figure(figsize=(10, 5))
     for i in range(3):
         plt.subplot(1, 3, i+1)
-        plt.hist(angles[:,i], bins=30, alpha=0.5, color='blue')
+        sns.histplot(angles[:,i], bins=30, kde=True, stat='density', alpha=0.5, color='blue', label=f'Traj {i}', edgecolor=None)
         plt.vlines(np.mean(angles[:,i]), plt.gca().get_ylim()[0], plt.gca().get_ylim()[1], color='k', linestyle='dashed', linewidth=1)
         if isinstance(xlabels, list):
             plt.xlabel(xlabels[i])
@@ -152,7 +155,7 @@ def plot_hist(angles, plotname, xlabels='x', ylabels='Frequency'):
         else:
             plt.ylabel(ylabels)
     plt.tight_layout()
-    plt.savefig(f"{plotname}.png", dpi=500, bbox_inches='tight')
+    plt.savefig(os.path.join(OUTDIR, f"{plotname}.png"), dpi=500, bbox_inches='tight')
 
 def plot_scatter(x,y, plotname, xlabel="RMSD ($\AA$)", ylabel='y'):
     """plot scatter plot of 2 data with marginal histograms"""
@@ -161,15 +164,21 @@ def plot_scatter(x,y, plotname, xlabel="RMSD ($\AA$)", ylabel='y'):
     g.plot_joint(sns.scatterplot, alpha=0.1, color='blue')
     #g.plot_marginals(sns.histplot, kde=True, color='blue')
     g.plot_marginals(sns.kdeplot, fill=True, color='blue')
-    g.savefig(f"{plotname}.png", dpi=500) 
+    g.savefig(os.path.join(OUTDIR, f"{plotname}.png"), dpi=500) 
 
- if align_traj:
-    for i,coordfile in enumerate(coordfiles):
+ref = md.load(ref_file)
+
+if align_traj:
+    n_traj = len(coordfiles)
+else:
+    n_traj = len(aligned_trajs)
+for i in range(n_traj):
+    if align_traj:
     # =============================================
     #               Load trajectory
     # =============================================
-   
-        print(f"\n... Loading Trajectory {i+1}/{len(coordfiles)} ...", flush=True)
+        print(f"\n... Loading Trajectory {i+1}/{n_traj} ...", flush=True)
+        coordfile = coordfiles[i]
         traj = md.load(coordfile,top=topfile,stride=stride)
         top = traj.topology
         time = np.arange(traj.n_frames) * dt * stride 
@@ -206,9 +215,9 @@ def plot_scatter(x,y, plotname, xlabel="RMSD ($\AA$)", ylabel='y'):
             name = coordfile.split("/")[-1]
             name = ''.join(name.split(".")[:-1])
             traj.save(f"{name}_aligned_stride{stride}_{i}.xtc")
-else:
-    for i,coordfile in enumerate(aligned_trajs):
-        print(f"\n... Loading Aligned Trajectory {i+1}/{len(aligned_trajs)} ...", flush=True)
+    else:
+        print(f"\n... Loading Aligned Trajectory {i+1}/{n_traj} ...", flush=True)
+        coordfile = aligned_trajs[i]
         traj = md.load(coordfile,top=topfile,stride=stride)
         top = traj.topology
         time = np.arange(traj.n_frames) * dt * stride
@@ -278,11 +287,11 @@ else:
 
         # save data to text file
         data = np.column_stack((time, rmsd))
-        np.savetxt(f"rmsd_arr_traj{i}.txt", data, header="Time_(ns)  RMSD_(Angstrom)", fmt='%.6f')
+        np.savetxt(os.path.join(OUTDIR, f"rmsd_arr_traj{i}.txt"), data, header="Time_(ns)  RMSD_(Angstrom)", fmt='%.6f')
         data = np.column_stack((time, euler_angles))
-        np.savetxt(f"euler_arr_traj{i}.txt", data, header="Time_(ns)  Roll_(deg)  Pitch_(deg)  Yaw_(deg)", fmt='%.6f')
+        np.savetxt(os.path.join(OUTDIR, f"euler_arr_traj{i}.txt"), data, header="Time_(ns)  Roll_(deg)  Pitch_(deg)  Yaw_(deg)", fmt='%.6f')
         data = np.column_stack((time, deviation_angles))
-        np.savetxt(f"deviation_arr_traj{i}.txt", data, header="Time_(ns)  Angle_PC1_(deg)  Angle_PC2_(deg)  Angle_PC3_(deg)", fmt='%.6f')
+        np.savetxt(os.path.join(OUTDIR, f"deviation_arr_traj{i}.txt"), data, header="Time_(ns)  Angle_PC1_(deg)  Angle_PC2_(deg)  Angle_PC3_(deg)", fmt='%.6f')
 
         # save trajectory with principal axes
         name = coordfile.split("/")[-1]
@@ -294,6 +303,10 @@ else:
         plot_hist(euler_angles, f"angle_euler_{i}", xlabels=['Roll-PC1 (deg)', 'Pitch-PC2 (deg)', 'Yaw-PC3 (deg)'])
         # plot distribution of deviation angles in all trajectories
         plot_hist(deviation_angles, f"angle_deviation_{i}", xlabels=['Angle PC1 (deg)', 'Angle PC2 (deg', 'Angle PC3 (deg)'])
+        # scatter plot of rmsd and euler angles
+        ylabels = ['Roll-PC1 (deg)', 'Pitch-PC2 (deg)', 'Yaw-PC3 (deg)']
+        for k in range(3):
+            plot_scatter(rmsd, euler_angles[:,k], f'rmsd_euler_pc{k+1}_{i}', xlabel="RMSD ($\AA$)", ylabel=ylabels[k])
 
         # append to all angles
         try:
@@ -309,9 +322,9 @@ else:
 plot_hist(euler_angles_all, f"angle_euler_all", xlabels=['Roll-PC1 (deg)', 'Pitch-PC2 (deg)', 'Yaw-PC3 (deg)'])
 # plot distribution of deviation angles in all trajectories
 plot_hist(deviation_angles_all, f"angle_deviation_all", xlabels=['Angle PC1 (deg)', 'Angle PC2 (deg', 'Angle PC3 (deg)'])
-
+# scatter plot of rmsd and euler angles
 ylabels = ['Roll-PC1 (deg)', 'Pitch-PC2 (deg)', 'Yaw-PC3 (deg)']
 for i in range(3):
-    plot_scatter(rmsd_arr_all, euler_angles_all[:,i], f'rmsd_euler_pc{i+1}', xlabel="RMSD ($\AA$)", ylabel=ylabels[i])
+    plot_scatter(rmsd_arr_all, euler_angles_all[:,i], f'rmsd_euler_pc{i+1}_all', xlabel="RMSD ($\AA$)", ylabel=ylabels[i])
 
 print("... Done ...", flush=True)   
